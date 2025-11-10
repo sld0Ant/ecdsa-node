@@ -28,6 +28,10 @@ const withdraw = (from, to, sum) => {
   getUser(to).balance += sum;
 };
 
+app.get("/users", (req, res) => {
+  res.send(users.map(({ id, balance }) => ({ id, balance })));
+});
+
 app.get("/balance/:address", (req, res) => {
   const { address } = req.params;
 

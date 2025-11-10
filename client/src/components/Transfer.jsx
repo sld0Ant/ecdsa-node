@@ -1,16 +1,17 @@
 import { useState } from "react";
-import server from "./server";
-import { sign, verify, getPublicKey } from "ethereum-cryptography/secp256k1";
-import { sha256 } from "ethereum-cryptography/sha256.js";
 import {
   bytesToHex as toHex,
   hexToBytes as toBytes,
 } from "ethereum-cryptography/utils.js";
 import { utf8ToBytes } from "ethereum-cryptography/utils.js";
-function Transfer({ address, setBalance }) {
+import { sign } from "ethereum-cryptography/secp256k1";
+import { sha256 } from "ethereum-cryptography/sha256.js";
+
+import server from "../utils/server";
+
+function Transfer({ address, setBalance, privateKey, handleSubmit }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
@@ -20,12 +21,7 @@ function Transfer({ address, setBalance }) {
     const txHashBytes = toBytes(txHashHex);
 
     const signature = await sign(txHashBytes, toBytes(privateKey));
-    console.log(
-      verify(signature, txHashBytes, getPublicKey(privateKey)),
-      signature,
-      txHashBytes,
-      getPublicKey(privateKey)
-    );
+
     return { signature: toHex(signature), txHash: toHex(txHash) };
   };
 
@@ -35,16 +31,7 @@ function Transfer({ address, setBalance }) {
   };
   async function transfer(evt) {
     evt.preventDefault();
-    console.log(
-      await buildTransaction(
-        {
-          sender: address,
-          amount: parseInt(sendAmount),
-          recipient,
-        },
-        privateKey
-      )
-    );
+
     try {
       const transaction = await buildTransaction(
         {
@@ -59,6 +46,7 @@ function Transfer({ address, setBalance }) {
         data: { balance },
       } = await server.post(`send`, transaction);
       setBalance(balance);
+      handleSubmit();
     } catch (ex) {
       alert(ex.response.data.message);
     }
@@ -85,16 +73,6 @@ function Transfer({ address, setBalance }) {
           onChange={setValue(setRecipient)}
         ></input>
       </label>
-
-      <label>
-        Private key
-        <input
-          placeholder="Type private key"
-          value={privateKey}
-          onChange={setValue(setPrivateKey)}
-        ></input>
-      </label>
-
       <input type="submit" className="button" value="Transfer" />
     </form>
   );
