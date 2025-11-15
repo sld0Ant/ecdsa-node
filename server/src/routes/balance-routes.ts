@@ -11,6 +11,9 @@ import {
   updateBalances,
   getSenderBalance,
 } from "@/services/balance-service";
+import { verify } from "ethereum-cryptography/secp256k1";
+import { hexToBytes, toHex, utf8ToBytes } from "ethereum-cryptography/utils";
+import { sha256 } from "ethereum-cryptography/sha256";
 
 const balanceSchema = {
   params: {
@@ -111,14 +114,37 @@ export async function balanceRoutes(fastify: FastifyInstance) {
     }
   });
 
+  const verifyTrx = (
+    tx: SendRequestBody,
+    signature: string,
+    txHash: string,
+    publicKey: string,
+  ) => {
+    const txOriginalHash = sha256(utf8ToBytes(JSON.stringify(tx)));
+    const txOriginalHashHex = toHex(txOriginalHash);
+
+    const isChecksumValid = txOriginalHashHex === txHash;
+
+    return isChecksumValid && verify(signature, txHash, publicKey);
+  };
+
   fastify.post<{
     Body: SendRequestBody;
     Reply: SendReplyBody | FastifyErrorReply;
   }>("/send", { schema: sendSchema }, async (request, reply) => {
-    const { sender, recipient, amount } = request.body;
+    const { sender, recipient, amount, signature, txHash, publicKey } =
+      request.body;
 
+    console.log(publicKey);
     try {
-      const success = updateBalances(sender, recipient, amount);
+      const success = verifyTrx(
+        { sender, amount, recipient },
+        signature,
+        txHash,
+        publicKey,
+      )
+        ? updateBalances(sender, recipient, amount)
+        : false;
 
       if (!success) {
         return reply.status(400).send({

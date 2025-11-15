@@ -14,7 +14,7 @@ const generatePKPair = () => {
   const publicKey = getPublicKey(privateKey);
   const address = getAddressFromPublicKey(publicKey);
   const labels = ["private key: ", "public key: ", "address: "];
-  tableLog([publicKey, publicKey, address].map(bytesToHex), labels);
+  tableLog([privateKey, publicKey, address].map(bytesToHex), labels);
 };
 
 generatePKPair();
